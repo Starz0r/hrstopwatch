@@ -143,10 +143,6 @@ fn get_win32_error(err: WIN32_ERROR) -> Result<(), windows::core::Error> {
     err.ok()
 }
 
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -158,15 +154,15 @@ mod tests {
         sw.resume().unwrap();
         sw.stop().unwrap();
     }
-	
-	#[test]
-	fn readme() -> Result<(), Box<dyn std::error::Error>>{
-		let mut num: u64 = 0;
-		let mut stopwatch = Stopwatch::start()?;
-		for i in 0..10000 {
-			num += i;
-		}
-		stopwatch.stop()?;
-		Ok(())
-	}
+
+    #[test]
+    fn readme() -> Result<(), Box<dyn std::error::Error>> {
+        let mut num: u64 = 0;
+        let mut stopwatch = Stopwatch::start()?;
+        for i in 0..10000 {
+            num += i;
+        }
+        stopwatch.stop()?;
+        Ok(())
+    }
 }
