@@ -4,7 +4,7 @@ use windows::Win32::{
 };
 
 #[derive(PartialEq)]
-pub enum StopwatchState {
+enum StopwatchState {
     Running = 1,
     Paused = 2,
     Stopped = 3,
