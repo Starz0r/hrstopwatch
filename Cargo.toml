@@ -1,6 +1,6 @@
 [package]
 name = "hrstopwatch"
-version = "0.0.2"
+version = "0.0.3"
 authors = ["Starz0r"]
 edition = "2021"
 license = "ISC"
