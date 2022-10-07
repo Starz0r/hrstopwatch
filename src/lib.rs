@@ -1,6 +1,9 @@
-use windows::Win32::{
-    Foundation::{GetLastError, BOOL, WIN32_ERROR},
-    System::Performance::{QueryPerformanceCounter, QueryPerformanceFrequency},
+use {
+    snafu::prelude::*,
+    windows::Win32::{
+        Foundation::{GetLastError, BOOL, WIN32_ERROR},
+        System::Performance::{QueryPerformanceCounter, QueryPerformanceFrequency},
+    },
 };
 
 #[derive(PartialEq)]
@@ -19,8 +22,23 @@ pub struct Stopwatch {
     intern_state: StopwatchState,
 }
 
+#[derive(Debug, Snafu)]
+pub enum Error<'a> {
+    #[snafu(display(
+        "The system encountered an error when performing a syscall ({}): {}",
+        syscall,
+        source
+    ))]
+    System {
+        source: windows::core::Error,
+        syscall: &'a str,
+    },
+}
+
+type Result<'a, T, E = Error<'a>> = std::result::Result<T, E>;
+
 impl Stopwatch {
-    pub fn start() -> Result<Self, windows::core::Error> {
+    pub fn start() -> Result<'static, Self> {
         let mut sw = Self {
             frequency: 0,
             start_time: 0,
@@ -31,17 +49,21 @@ impl Stopwatch {
         };
         let mut result = unsafe { QueryPerformanceFrequency(&mut sw.frequency) };
         if result == false {
-            return unsafe { Err(GetLastError().ok().unwrap_err_unchecked()) };
+            get_win32_error(unsafe { GetLastError() }).context(SystemSnafu {
+                syscall: "QueryPerformanceFrequency",
+            })?;
         }
         result = unsafe { QueryPerformanceCounter(&mut sw.start_time) };
         if result == false {
-            return unsafe { Err(GetLastError().ok().unwrap_err_unchecked()) };
+            get_win32_error(unsafe { GetLastError() }).context(SystemSnafu {
+                syscall: "QueryPerformanceCounter",
+            })?;
         }
 
         Ok(sw)
     }
 
-    pub fn stop(&mut self) -> Result<(), windows::core::Error> {
+    pub fn stop(&mut self) -> Result<'static, ()> {
         let mut result = BOOL(true as i32);
 
         match self.intern_state {
@@ -55,13 +77,16 @@ impl Stopwatch {
         };
 
         if result == false {
-            get_win32_error(unsafe { GetLastError() })
+            get_win32_error(unsafe { GetLastError() }).context(SystemSnafu {
+                syscall: "QueryPerformanceCounter",
+            })?;
         } else {
-            Ok(())
+            return Ok(());
         }
+        unreachable!("error was caught, but was OK when observed")
     }
 
-    pub fn pause(&mut self) -> Result<(), windows::core::Error> {
+    pub fn pause(&mut self) -> Result<'static, ()> {
         let mut result = BOOL(true as i32);
 
         if self.intern_state == StopwatchState::Running {
@@ -70,13 +95,16 @@ impl Stopwatch {
         }
 
         if result == false {
-            get_win32_error(unsafe { GetLastError() })
+            get_win32_error(unsafe { GetLastError() }).context(SystemSnafu {
+                syscall: "QueryPerformanceCounter",
+            })?;
         } else {
-            Ok(())
+            return Ok(());
         }
+        unreachable!("error was caught, but was OK when observed")
     }
 
-    pub fn resume(&mut self) -> Result<(), windows::core::Error> {
+    pub fn resume(&mut self) -> Result<'static, ()> {
         let mut time = 0;
         let result = unsafe { QueryPerformanceCounter(&mut time) };
 
@@ -87,10 +115,13 @@ impl Stopwatch {
         }
 
         if result == false {
-            get_win32_error(unsafe { GetLastError() })
+            get_win32_error(unsafe { GetLastError() }).context(SystemSnafu {
+                syscall: "QueryPerformanceCounter",
+            })?;
         } else {
-            Ok(())
+            return Ok(());
         }
+        unreachable!("error was caught, but was OK when observed")
     }
 
     #[inline]
@@ -139,7 +170,7 @@ impl Stopwatch {
     }
 }
 
-fn get_win32_error(err: WIN32_ERROR) -> Result<(), windows::core::Error> {
+fn get_win32_error(err: WIN32_ERROR) -> std::result::Result<(), windows::core::Error> {
     err.ok()
 }
 
@@ -156,7 +187,7 @@ mod tests {
     }
 
     #[test]
-    fn readme() -> Result<(), Box<dyn std::error::Error>> {
+    fn readme() -> std::result::Result<(), Box<dyn std::error::Error>> {
         let mut num: u64 = 0;
         let mut stopwatch = Stopwatch::start()?;
         for i in 0..10000 {
