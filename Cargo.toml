@@ -1,6 +1,6 @@
 [package]
 name = "hrstopwatch"
-version = "0.0.3"
+version = "0.1.0"
 authors = ["Starz0r"]
 edition = "2021"
 license = "ISC"
@@ -11,3 +11,4 @@ repository = "https://github.com/Starz0r/hrstopwatch"
 
 [dependencies]
 windows = { version = "0.39.0", features = [ "Win32_Foundation", "Win32_System_Performance" ] }
+snafu = "0.7.1"
